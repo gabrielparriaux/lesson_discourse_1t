@@ -1,0 +1,1004 @@
+---
+title: "class_ID, lesson_ID --- teachers' classroom discourse transcript"
+author: "Gabriel Parriaux"
+date: last-modified
+version: 2.5
+toc: true
+toc-depth: 4
+number-sections: true
+# bibliography: references.bib
+# csl: apa.csl
+lightbox: auto
+format:
+  bookup-html+dark:
+    toc: true
+    toc-depth: 4
+    embed-resources: true
+    fig-width: 18
+    fig-height: 12
+  html:
+    code-fold: true
+    df-print: kable
+    embed-resources: true
+    number-offset: 0
+    fig-width: 18
+    fig-height: 12
+  pdf:
+    header-includes:
+    - \usepackage{pdflscape}
+    - \newcommand{\blandscape}{\begin{landscape}}
+    - \newcommand{\elandscape}{\end{landscape}}
+    colorlinks: true
+    prefer-html: false
+    number-offset: 1
+    fig-width: 12
+    fig-height: 8
+    lot: true
+    lof: true
+    tbl-colwidths: auto
+    df-print: kable
+---
+
+```{r}
+#| label: import-libraries
+#| include: false
+
+# load libraries
+source("01_libraries.R", local = knitr::knit_global())
+
+```
+
+```{r}
+#| label: define-global-variables
+#| include: false
+
+# project folder
+data_dir <- getwd()
+
+# teachers anonymized
+first_teacher <- "teacher01"
+second_teacher <- "teacher02"
+
+# teachers' names
+first_teacher_name <- "xxx"
+second_teacher_name <- "xxx"
+
+# lesson's variables
+lesson_id <- "cl01_pr1"
+lesson_topic <- "programming1"
+programming_type <- "visual"
+class_id <- "class01"
+number_of_teachers <- 2
+first_teacher_number_of_attempts_for_this_lesson <- 1
+second_teacher_number_of_attempts_for_this_lesson <- 1
+
+# there is a pause between the two lessons that has to be removed (toggle TRUE of FALSE depending the situation)
+pause_yes <- FALSE
+
+# define the pause starting time and duration (not evaluated if pause_yes is FALSE)
+if (pause_yes) {
+  # store pause starting time in a variable (have to estimate it manually in first_teacher_complete)
+  pause_start_time <- period_to_seconds(hms("00:45:00"))
+
+  # store pause duration (have to estimate it manually in first_teacher_complete)
+  pause_duration_in_s <- 18*60
+}
+
+# number of clusters for reinert
+clusters_number <- 25
+
+# the clusters have been interpreted and renamed
+clusters_renamed_yes <- TRUE
+
+```
+
+```{r}
+#| label: import-teachers-transcript-comments-variables
+#| include: false
+
+# do the import
+source("02_import.R", local = knitr::knit_global())
+
+```
+
+```{r}
+#| label: display-errors
+#| output: false
+#| echo: false
+
+# first_teacher
+check_1
+
+# second_teacher
+check_2
+
+```
+
+```{r}
+#| label: first-teacher-pretreatment
+#| output: true
+#| echo: false
+
+# remove rows that are not verified transcriptions of first_teacher
+first_teacher_reduced <- subset(first_teacher_transcript, Speaker == first_teacher_name & Status == "verified")
+
+# Here, necessary to inspect first_teacher_reduced to detect any strange lines (time with 00:00:00.000, or a extraordinary long duration for example)
+# manually correct errors in timecode due to microphone bugs / normally not necessary
+# first_teacher_reduced[1,1] <- "00:06:10.000"
+# first_teacher_reduced[1,3] <- "00:00:05.000"
+# first_teacher_reduced[2,1] <- "00:07:51.000"
+# first_teacher_reduced[2,3] <- "00:00:14.000"
+# manually correct a value that is 00:00:00.000 ?!?
+# first_teacher_reduced["402", "In"] <- "00:45:02.000"
+# first_teacher_reduced["402", "Duration"] <- "00:00:02.488"
+
+# remove columns not useful
+first_teacher_reduced <- subset(first_teacher_reduced, select = -c(Out, Status))
+
+# anonymize teacher's name
+first_teacher_reduced$Speaker[first_teacher_reduced$Speaker == first_teacher_name] <- first_teacher
+
+# convert duration in seconds
+# create function
+conv_to_sec <- function(x) {
+  period_to_seconds(hms(x))
+}
+# apply function to data.frame Duration column
+first_teacher_reduced[c('Duration')] <- lapply(first_teacher_reduced[c('Duration')], conv_to_sec)
+
+# remove unnecessary single quote at beginning of certain text cells
+first_teacher_reduced$Text <- str_remove(first_teacher_reduced$Text, "^'")
+
+# anonymize the name of the other teacher in the discourse of first_teacher
+first_teacher_reduced <- first_teacher_reduced %>%
+      mutate_at("Text", str_replace_all, second_teacher_name, paste0(second_teacher, "_name"))
+
+# anonymize the name of the first teacher in its own discourse (when he/she presents herself…)
+first_teacher_reduced <- first_teacher_reduced %>%
+      mutate_at("Text", str_replace_all, first_teacher_name, paste0(first_teacher, "_name"))
+
+```
+
+```{r}
+#| label: first-teacher-comments-pretreatment-and-merge
+#| output: true
+#| echo: false
+
+# delete rows with comments made by transcripters and that do not match my way of doing
+# first_teacher_comments <- first_teacher_comments %>%
+#   filter(!grepl("^jean.amaudruz@etu.hepl.ch:*", Comment_1))
+
+# manually correct errors in timecode / normally not necessary
+# first_teacher_comments[1,1] <- "00:06:10.000"
+# first_teacher_comments[2,1] <- "00:07:51.000"
+# first_teacher_comments[3,1] <- "00:08:38.340"
+# first_teacher_comments[12,1] <- "00:24:05.510"
+# first_teacher_comments[47,1] <- "01:13:33.360"
+
+# merge teacher and comments
+first_teacher_reduced <- merge(first_teacher_reduced, first_teacher_comments, by.x = "In", by.y = "In", all = TRUE)
+
+```
+
+```{r}
+#| label: import-first-teacher-columns-management-discourse-tables
+#| include: false
+
+# do the import
+source("03_first_teacher_discourse_tables.R", local = knitr::knit_global())
+
+```
+
+```{r}
+#| label: second-teacher-pretreatment
+#| output: true
+#| echo: false
+
+# remove rows that are not verified transcriptions of second_teacher
+second_teacher_reduced <- subset(second_teacher_transcript, Speaker == second_teacher_name & Status == "verified")
+
+# remove columns not useful
+second_teacher_reduced <- subset(second_teacher_reduced, select = -c(Out, Status))
+
+# anonymize teacher's name
+second_teacher_reduced$Speaker[second_teacher_reduced$Speaker == second_teacher_name] <- second_teacher
+
+# convert duration in seconds
+# function already defined for first_teacher
+# apply function to data.frame Duration column
+second_teacher_reduced[c('Duration')] <- lapply(second_teacher_reduced[c('Duration')], conv_to_sec)
+
+# remove unnecessary single quote at beginning of certain text cells
+second_teacher_reduced$Text <- str_remove(second_teacher_reduced$Text, "^'")
+
+# anonymize the name of the other teacher in the discourse of second_teacher
+second_teacher_reduced <- second_teacher_reduced %>%
+      mutate_at("Text", str_replace_all, first_teacher_name, paste0(first_teacher, "_name"))
+
+# anonymize the name of the second teacher in its own discourse (when he/she presents herself…)
+second_teacher_reduced <- second_teacher_reduced %>%
+      mutate_at("Text", str_replace_all, second_teacher_name, paste0(second_teacher, "_name"))
+
+```
+
+```{r}
+#| label: second-teacher-comments-pretreatment-and-merge
+#| output: true
+#| echo: false
+
+# Here, necessary to inspect second_teacher_reduced after the join with comments to detect any strange lines, for example line with NA that gets created if the timestamp of a comment doesn’t correspond to the beginning timestamp of a discourse
+# manually correct errors in timecode / normally not necessary
+second_teacher_comments[25,1] <- "00:30:23.200"
+
+# merge teacher and comments
+second_teacher_reduced <- merge(second_teacher_reduced, second_teacher_comments, by.x = "In", by.y = "In", all = TRUE)
+
+```
+
+```{r}
+#| label: import-end-of-intro
+#| include: false
+
+# do the import
+source("04_end_of_intro.R", local = knitr::knit_global())
+
+```
+
+# Lesson’s context
+
+Here we give a brief overview of the lesson’s context, facts and figures.
+
+It’s a two-periods lesson of around 90 minutes given in a primary class of a French-speaking canton. The grade is 6th grade (pupils are around 10-11 years old). 
+
+The two teachers are pre-service teachers in their second year of training who were hired especially for the project.
+
+TBD
+
+# Classroom discourse
+
+Here is the complete transcript of teachers’ classroom discourse. 
+
+```{r}
+#| label: merged-teachers-display-full-discourse
+#| output: true
+#| echo: false
+#| tbl-colwidths: [15,10,68,7]
+
+# create a copy just for display because we will remove rownames so that they are not displayed in output
+merged_teachers_for_display <- merged_teachers
+
+# remove rownames
+rownames(merged_teachers_for_display) <- NULL
+
+# display
+kable(merged_teachers_for_display[c("In", "Speaker", "Text", "To")])
+
+```
+
+# Didactical comments
+
+And here are the didactical comments we made during the transcript, focusing on misconceptions and use of notional machines by teachers.
+
+```{r}
+#| label: merged-teachers-display-comments
+#| output: true
+#| echo: false
+#| tbl-colwidths: [15,45,10,30]
+
+# create a copy just for display because we will remove rownames so that they are not displayed in output
+merged_teachers_comments_dida_for_display <- merged_teachers_comments_dida
+
+# remove rownames
+rownames(merged_teachers_comments_dida_for_display) <- NULL
+
+# display
+kable(merged_teachers_comments_dida_for_display)
+
+```
+
+{{< pagebreak >}}
+
+# General statistics
+
+The values presented here are computed on the original unlemmatised text. Punctuation is removed from the word count and all the text is lowercased.
+
+## `r first_teacher`
+
+Considering the statements featured in this lesson, here are the statistics for `r first_teacher`.
+
+```{r}
+#| label: tbl-first-teacher-stats-display
+#| output: true
+#| echo: false
+#| tbl-cap: !expr 'first_teacher_stats_table_caption'
+#| tbl-colwidths: [20,15,25,20,20]
+
+kable(first_teacher_stats_table)
+
+```
+
+## `r second_teacher`
+
+Considering the statements featured in this lesson, here are the statistics for `r second_teacher`.
+
+```{r}
+#| label: tbl-second-teacher-stats-display
+#| output: true
+#| echo: false
+#| tbl-cap: !expr 'second_teacher_stats_table_caption'
+#| tbl-colwidths: [20,15,25,20,20]
+
+kable(second_teacher_stats_table)
+
+```
+
+## `r first_teacher` and `r second_teacher` merged
+
+Considering the statements featured in this lesson, here are the statistics for `r first_teacher` and `r second_teacher`.
+
+```{r}
+#| label: tbl-merged-teachers-stats-display
+#| output: true
+#| echo: false
+#| tbl-cap: !expr 'merged_teachers_stats_table_caption'
+#| tbl-colwidths: [20,15,25,20,20]
+
+kable(merged_teachers_stats_table)
+
+```
+
+## Evolution during the lesson
+
+Here we present the distribution of the statements and vocabulary over the lesson.
+
+```{r}
+#| label: fig-plot-number-of-tokens-per-statement-by-address-to-display
+#| output: true
+#| echo: false
+#| layout-ncol: 1
+#| fig-cap: Number of words per statement over the lesson, by recipient of the statement
+#| fig-width: 12
+#| fig-height: 6
+
+tokens_per_statement_by_address_to
+
+```
+
+```{r}
+#| label: fig-plot-number-of-tokens-per-statement-by-teacher-display
+#| output: true
+#| echo: false
+#| layout-ncol: 1
+#| fig-cap: Number of words per statement over the lesson, by teacher
+#| fig-width: 12
+#| fig-height: 6
+
+tokens_per_statement_by_teacher
+
+```
+
+{{< pagebreak >}}
+
+# Frequent lexicon
+
+```{r}
+#| label: import-splitting-lemmatisation-tokenisation-data-feature-matrix-creation
+#| include: false
+
+# do the import
+source("05_splitting_lemmatisation_tokenisation_dfm_creation.R", local = knitr::knit_global())
+
+```
+
+```{r}
+#| label: words-removal-and-submatrix-creation
+#| output: false
+#| echo: false
+
+# common stopwords list in French
+stopwords_fr_common <- stopwords("fr", source = "snowball") # 164 words
+
+# words to remove during analysis
+words_removed_during_analysis <- c("c’", "qu’", "t’", "d’", "l’", "-ce", "-là", "s’", "j’", "n’","...", "..j")
+
+# words very common to remove
+# words_very_common_to_remove <- c("être", "avoir", "aller", "faire", "là", "mettre", "pouvoir", "voir", "devoir", "donc", "si", "non", "ouais", "comme", "vouloir", "oui", "falloir", "bien", "alors", "peu", "fait", "parce", "tout", "plus", "hein", "ah", "maintenant", "ok", "fois", "euh")
+
+# stopwords_fr_common and words_removed_during_analysis
+words_2b_removed <- c(stopwords_fr_common, words_removed_during_analysis #, words_very_common_to_remove
+                      )
+
+# remove words from dfm → get dfm without stopwords
+dfm_without_stopwords <- dfm_remove(dfm_complete_lemmatized, words_2b_removed)
+
+# stats dfm without stopwords (most frequent words)
+
+# most frequent words in the dfm
+freq_main_corp_lemm <- textstat_frequency(dfm_without_stopwords)
+
+# subset dfm with address_to class and stat of most frequent words
+dfm_to_class <- dfm_subset(dfm_without_stopwords, To == "class")
+freq_corp_to_class <- textstat_frequency(dfm_to_class)
+
+# subset dfm with address_to pupil and stat of most frequent words
+dfm_to_pupil <- dfm_subset(dfm_without_stopwords, To == "pupil")
+freq_corp_to_pupil <- textstat_frequency(dfm_to_pupil)
+
+# subset dfm with address_to teacher and stat of most frequent words
+dfm_to_teacher <- dfm_subset(dfm_without_stopwords, To == "teacher")
+freq_corp_to_teacher <- textstat_frequency(dfm_to_teacher)
+
+```
+
+To look at the most frequent words used by teachers during the lesson, we use a lemmatised version of the corpus where all forms have been reduced to their lemma. We remove numbers and a list of common stopwords in French called “snowball” containing 164 stopwords.
+
+Preparing Reinert's clustering that we’ll execute later on, we split all statements into segments of around 40 words, according to Reinert's method. 
+
+We obtain a data-feature matrix crossing **`r length(dfm_without_stopwords@Dimnames[["docs"]])` segments** and **`r length(dfm_without_stopwords@Dimnames[["features"]])` words**.
+
+This data-feature matrix let us compute the most frequent words used by teachers during the lesson.
+
+## `r first_teacher`
+
+```{r}
+#| label: import-plot-frequencies
+#| include: false
+
+# do the import
+source("06_plot_frequencies.R", local = knitr::knit_global())
+
+```
+
+Here are the 50 most frequent words in the discourse of `r first_teacher`:
+
+```{r}
+#| label: fig-plot-frequency-first-teacher-display
+#| output: true
+#| echo: false
+#| layout-ncol: 1
+#| fig-cap: !expr 'plot_freq_first_teacher_caption'
+#| fig-width: 12
+#| fig-height: 10
+
+plot_freq_first_teacher
+
+```
+
+And here are the 50 most frequent words in the discourse of `r first_teacher` when we separate the audience to which the discourse is adressed:
+
+```{r}
+#| label: fig-plot-frequency-separated-audience-first-teacher-display
+#| output: true
+#| echo: false
+#| layout-ncol: 3
+#| fig-cap: !expr 'plot_freq_first_teacher_by_recipient_caption'
+#| fig-subcap:
+#|   - "To the whole class"
+#|   - "To an individual pupil"
+#|   - "To the other teacher"
+#| fig-width: 4
+#| fig-height: 10
+
+plot_freq_first_teacher_to_class
+
+plot_freq_first_teacher_to_pupil
+
+plot_freq_first_teacher_to_teacher
+
+```
+
+## `r second_teacher`
+
+Here are the 50 most frequent words in the discourse of `r second_teacher`:
+
+```{r}
+#| label: fig-plot-frequency-second-teacher-display
+#| output: true
+#| echo: false
+#| layout-ncol: 1
+#| fig-cap: !expr 'plot_freq_second_teacher_caption'
+#| fig-width: 12
+#| fig-height: 10
+
+plot_freq_second_teacher
+
+```
+
+And here are the 50 most frequent words in the discourse of `r second_teacher` when we separate the audience to which the discourse is adressed:
+
+```{r}
+#| label: fig-plot-frequency-separated-audience-second-teacher-display
+#| output: true
+#| echo: false
+#| layout-ncol: 3
+#| fig-cap: !expr 'plot_freq_second_teacher_by_recipient_caption'
+#| fig-subcap:
+#|   - "To the whole class"
+#|   - "To an individual pupil"
+#|   - "To the other teacher"
+#| fig-width: 4
+#| fig-height: 10
+
+plot_freq_second_teacher_to_class
+
+plot_freq_second_teacher_to_pupil
+
+plot_freq_second_teacher_to_teacher
+
+```
+
+{{< pagebreak >}}
+
+## `r first_teacher` and `r second_teacher` merged
+
+Here are the 50 most frequent words in the discourse of the two teachers:
+
+```{r}
+#| label: fig-plot-frequency-merged-teachers-display
+#| output: true
+#| echo: false
+#| layout-ncol: 1
+#| fig-cap: !expr 'plot_freq_main_corp_lemm_caption'
+#| fig-width: 12
+#| fig-height: 10
+
+plot_freq_main_corp_lemm
+
+```
+
+# Clustering
+
+```{r}
+#| label: define-biggest-clusters-names
+#| include: false
+
+# define the name of the biggest clusters after interpretation
+biggest_clusters_names <- c("cl10 movement", "cl09 command basics", "cl05 instruction", "cl21 guidance", "cl11 conceptual exploration", "cl16 optimisation", "cl07 angles", "cl12 interaction", "cl15 hands-on", "cl19 troubleshooting")
+
+```
+
+```{r}
+#| label: import-reinert-clustering
+#| include: false
+
+# do the import
+source("07_reinert_clustering.R", local = knitr::knit_global())
+
+```
+
+Using the data-feature matrix created earlier, we remove the documents that contain less than three words and the words that appear in less than 3 documents.
+
+The resulting data-feature matrix crosses **`r length(dfm_without_stopwords_and_short_segments@Dimnames[["docs"]])` segments** and **`r length(dfm_without_stopwords_and_short_segments@Dimnames[["features"]])` words**.
+
+Here are the first six rows and 12 columns of the data-feature matrix:
+
+```{r}
+#| label: data-feature-matrix-head-display
+#| output: true
+#| echo: false
+#| tbl-cap: Data-feature matrix first lines and columns
+
+kable(head(convert(dfm_without_stopwords_and_short_segments, to = "data.frame")[ , 1:12]))
+
+```
+
+There are **`r ncol(docvars(dfm_without_stopwords_and_short_segments))` variables** associated with the segments composing the data-feature matrix.
+
+Here is the list of those variables: *`r colnames(docvars(dfm_without_stopwords_and_short_segments))`*.
+
+We perform a simple Reinert's clustering with **`r clusters_number` clusters**, a minimum segment size of 15 and a minimum cluster size of 8.
+
+## Most important clusters
+
+The **`r cluster_nbr_for_interpretation` biggest clusters**, ordered by descending number of segments they contain, are the following:
+
+`r biggest_clusters`
+
+\newpage
+\blandscape
+
+```{r}
+#| label: fig-display-clustering
+#| output: true
+#| echo: false
+#| fig-cap: "Dendrogram of clusters produced by Reinert's Clustering"
+
+# plot dendrogram invisible() makes
+invisible(plot_dendrogram())
+
+```
+
+\elandscape
+
+We can look at the size of the clusters in terms of segments.
+
+```{r}
+#| label: fig-display-statistics-for-clusters
+#| output: true
+#| echo: false
+#| fig-cap: "Plot of the number of segments per cluster"
+#| fig-width: 12
+#| fig-height: 6
+
+clusters_size_in_segments
+  
+```
+
+### Cluster `r biggest_clusters[1]` (containing `r cluster_nb_of_segments[[1]]` segments) --- `r biggest_clusters_names[1]`
+
+#### Tokens
+
+`r tokens_in_clusters[[as.numeric(biggest_clusters[1])]]$feature`
+
+```{r}
+#| label: fig-tokens-in-first-cluster-display
+#| output: true
+#| echo: false
+#| fig-cap: !expr 'first_cluster_caption'
+#| layout-ncol: 1
+#| fig-width: 12
+#| fig-height: 10
+
+# display table if we prefer than plot
+# as.data.frame(tokens_in_clusters[[as.numeric(biggest_clusters[1])]])
+
+first_cluster_keyness <- textstat_keyness(dfm_without_stopwords_and_short_segments, target = dfm_without_stopwords_and_short_segments$Cluster == biggest_clusters[1])
+textplot_keyness(first_cluster_keyness, show_legend = TRUE, show_reference = TRUE, n = 20)
+
+```
+
+#### Interpretation
+
+Segments in this cluster describe a succession of things with the frequent use of the word “then” (*ensuite*) in sentences like “and then, what can we do?”, “and then, what else do we do?”, often in questions that the teachers ask pupils during the execution of an exercise. The segments have to do with the description of a movement as it has the words “turn” (*tourner*), “right” (*droite*), “left” (*gauche*), “direction” (*sens*), “move forward” (*avancer*), “straight” (*droit*), “go away” (*partir*) or “return” (*retourner*). In those segments, the teachers approve what pupils say with words like “ok”, “yes” (*oui*) and “true” (*vrai*). It suggests a step-by-step approach to teaching programming concepts related to movement and direction. 
+
+We call it *movement*.
+
+### Cluster `r biggest_clusters[2]` (containing `r cluster_nb_of_segments[[2]]` segments) ---  `r biggest_clusters_names[2]`
+
+#### Tokens
+
+`r tokens_in_clusters[[as.numeric(biggest_clusters[2])]]$feature`
+
+```{r}
+#| label: fig-tokens-in-second-cluster-display
+#| output: true
+#| echo: false
+#| fig-cap: !expr 'second_cluster_caption'
+#| layout-ncol: 1
+#| fig-width: 12
+#| fig-height: 10
+
+# as.data.frame(tokens_in_clusters[[as.numeric(biggest_clusters[2])]])
+
+second_cluster_keyness <- textstat_keyness(dfm_without_stopwords_and_short_segments, target = dfm_without_stopwords_and_short_segments$Cluster == biggest_clusters[2])
+textplot_keyness(second_cluster_keyness, show_legend = TRUE, show_reference = TRUE, n = 20)
+
+```
+
+#### Interpretation
+
+In this cluster, there is a frequent use of terms related to the syntax of the programming commands or to the manipulation of the visual interface. The verb “to put” (*mettre*) is used as the action of putting something, for example blocks or a space between a command and a number, or a number of repetitions in a command. The word “number” (*nombre*) is also overrepresented in those segments, as is “block” (*bloc*) and the verb “to repeat” (*répéter*). The word “between” (*entre*) is also often used in those segments in expressions like “between the command and the number”, “between parentheses” or “between brackets”. The expression “instead of” (word *lieu* from the expression *au lieu de*) is also present in those segments. The word “inside” (*dedans*) is used to mention that it’s necessary to click inside the numbers or that blocks have to go inside the loop. The instruction to turn left “LT”, and the verb “to turn” (*tourner*) are overrepresented. It suggests discussions around command syntax, repetition, and problem-solving strategies. The cluster appears to address challenges encountered by students while learning programming with turtle graphics, such as understanding syntax errors and navigating the platform's interface.
+
+We call it *command basics*.
+
+### Cluster `r biggest_clusters[3]` (containing `r cluster_nb_of_segments[[3]]` segments) ---  `r biggest_clusters_names[3]`
+
+#### Tokens
+
+`r tokens_in_clusters[[as.numeric(biggest_clusters[3])]]$feature`
+
+```{r}
+#| label: fig-tokens-in-third-cluster-display
+#| output: true
+#| echo: false
+#| fig-cap: !expr 'third_cluster_caption'
+#| layout-ncol: 1
+#| fig-width: 12
+#| fig-height: 10
+
+# as.data.frame(tokens_in_clusters[[as.numeric(biggest_clusters[3])]])
+
+third_cluster_keyness <- textstat_keyness(dfm_without_stopwords_and_short_segments, target = dfm_without_stopwords_and_short_segments$Cluster == biggest_clusters[3])
+textplot_keyness(third_cluster_keyness, show_legend = TRUE, show_reference = TRUE, n = 20)
+
+```
+
+#### Interpretation
+
+Those segments deal with the instruction to turn right in textual programming on the Xlogo platform: “RT” and with the instruction to move forward, “FD”. We have also the verb “to turn” (*tourner*) that is overrepresented in this cluster, as is the verb “to move forward” (avancer). Unfortunately, the pronoun *lui* (“it”) has been wrongly lemmatised by spaCy to the verb *luire* (“to shine”). We find the pronoun in conjunction with the verb “to tell” (*dire*) in segments where the teacher comments about the pupils telling the turtle to do something. For example, “you tell it to move forward 100” or “you didn’t tell it how much it has to move forward”. The verb “must” or “have to” (*devoir*) is also overrepresented in those segments, giving an idea of prescriptive sentences, often in instructions given by teachers. The verb “to miss” (*manquer*) is also present in comments about the fact that there is some part of a code that is missing. The word “behind” (*derrière*) is used to mention that behind the block of the visual interface, there is text that gives an instruction. Those words suggest discussions around command execution and language conventions. The cluster seems to address issues related to identifying missing elements and determining appropriate command parameters.
+
+We call it *instruction*.
+
+### Cluster `r biggest_clusters[4]` (containing `r cluster_nb_of_segments[[4]]` segments) ---  `r biggest_clusters_names[4]`
+
+#### Tokens
+
+`r tokens_in_clusters[[as.numeric(biggest_clusters[4])]]$feature`
+
+```{r}
+#| label: fig-tokens-in-fourth-cluster-display
+#| output: true
+#| echo: false
+#| fig-cap: !expr 'fourth_cluster_caption'
+#| layout-ncol: 1
+#| fig-width: 12
+#| fig-height: 10
+
+# as.data.frame(tokens_in_clusters[[as.numeric(biggest_clusters[4])]])
+
+fourth_cluster_keyness <- textstat_keyness(dfm_without_stopwords_and_short_segments, target = dfm_without_stopwords_and_short_segments$Cluster == biggest_clusters[4])
+textplot_keyness(fourth_cluster_keyness, show_legend = TRUE, show_reference = TRUE, n = 20)
+
+```
+
+#### Interpretation
+
+The cluster contains segments related to guidance from the teacher who is involved in discussions with pupils about the activities they realise and the challenges they face. The word *plus* in French that can have both meanings: “more” or “anymore” in a negative sentence. Segments in the corpus containing this word appear with both meanings. It is associated with the word *rien* in the expression *plus rien* (“nothing more”). The word “further” (*loin*) in sentences where teachers talk about “going further” in the exercises. The words “easy” (*facile*) and “difficult” (*compliqué*) are also appearing in the segments of this cluster, in comments about the fact that the exercise was easy or about the fact that the pupil has made things difficult for himself. It is related to the word *vie* in the expression *tu t’es compliqué la vie* (“you’ve made things difficult for yourself!”). There are moments when the teacher asks the pupils not to touch the “iPad” anymore, with the word “no” (*non*) and the verb “to touch” (*toucher*), in expression like “No, please, don’t touch the iPad just yet!”. Sometimes, the teachers ask the pupils not to touch anymore what was done (on screen). The word “soon” (*bientôt*) appears also in this cluster in sentences related to the fact that the lesson will end soon. The verb “to manipulate” (*manipuler*) is also overrepresented in the cluster, in sentences where the teacher tells pupils that they will manipulate, without saying explicitly what they will manipulate.
+
+We call it *guidance*.
+
+### Cluster `r biggest_clusters[5]` (containing `r cluster_nb_of_segments[[5]]` segments) ---  `r biggest_clusters_names[5]`
+
+#### Tokens
+
+`r tokens_in_clusters[[as.numeric(biggest_clusters[5])]]$feature`
+
+```{r}
+#| label: fig-tokens-in-fifth-cluster-display
+#| output: true
+#| echo: false
+#| fig-cap: !expr 'fifth_cluster_caption'
+#| layout-ncol: 1
+#| fig-width: 12
+#| fig-height: 10
+
+# as.data.frame(tokens_in_clusters[[as.numeric(biggest_clusters[5])]])
+
+fifth_cluster_keyness <- textstat_keyness(dfm_without_stopwords_and_short_segments, target = dfm_without_stopwords_and_short_segments$Cluster == biggest_clusters[5])
+textplot_keyness(fifth_cluster_keyness, show_legend = TRUE, show_reference = TRUE, n = 20)
+
+```
+
+#### Interpretation
+
+There are a lot of informatics words in this cluster that highlights discussions around programming concepts and activities, in an exploration mode. The first overrepresented word in the segments of this cluster is the word “instruction”, as the informatics concept of a command given to the machine. As a synonym, the word “command” appears in the cluster. The verb “to give” is also associated with this cluster, in relation with the word “instruction” in expressions like “you didn’t give the correct instruction”. We also find the verb “to repeat” (*répéter*), the words “loop” (*boucle*), “programming” (*programmation*) and the verb “to program” (*programmer*). We also find the verb “to call” (*s’appeler*) in expressions where the teacher tells pupils that something “is called a loop”, or “is called a programming language”. The word “robot” appears in discussions with the class about pupil’s experience with informatics and programming.
+
+We call it *conceptual exploration*.
+
+### Cluster `r biggest_clusters[6]` (containing `r cluster_nb_of_segments[[6]]` segments) ---  `r biggest_clusters_names[6]`
+
+#### Tokens
+
+`r tokens_in_clusters[[as.numeric(biggest_clusters[6])]]$feature`
+
+```{r}
+#| label: fig-tokens-in-sixth-cluster-display
+#| output: true
+#| echo: false
+#| fig-cap: !expr 'sixth_cluster_caption'
+#| layout-ncol: 1
+#| fig-width: 12
+#| fig-height: 10
+
+# as.data.frame(tokens_in_clusters[[as.numeric(biggest_clusters[6])]])
+
+sixth_cluster_keyness <- textstat_keyness(dfm_without_stopwords_and_short_segments, target = dfm_without_stopwords_and_short_segments$Cluster == biggest_clusters[6])
+textplot_keyness(sixth_cluster_keyness, show_legend = TRUE, show_reference = TRUE, n = 20)
+
+```
+
+#### Interpretation
+
+This cluster focuses on optimising tasks, especially when programming the turtle to draw a square. Many segments in this cluster have to do with the fact of using as few commands as possible. In relation with that, we find the words “possible” mostly in the expression “as few commands as possible”, the words “less” (*moins*), “commands” (*commandes*), the verb “to use” (*utiliser*). We find also segments that are questions of the teacher to the pupils whether they succeeded or not in realising an exercise, the verb “to succeed” (*réussir*) is associated to the cluster. “Exercises” (*exercice*) are related to the realisation of a “square” (*carré*) and the teacher asks “how” (*comment*) pupils can do a square, sometimes using as few commands as possible. Teachers asks pupils to “try” (*essayer*) to “think” (*réfléchir*) how it is possible. Teacher criticises when pupils use “many” (*beaucoup*) commands. The word “loop” (*boucle*) is also associated to the cluster.
+
+We call it *optimisation*.
+
+### Cluster `r biggest_clusters[7]` (containing `r cluster_nb_of_segments[[7]]` segments) ---  `r biggest_clusters_names[7]`
+
+#### Tokens
+
+`r tokens_in_clusters[[as.numeric(biggest_clusters[7])]]$feature`
+
+```{r}
+#| label: fig-tokens-in-seventh-cluster-display
+#| output: true
+#| echo: false
+#| fig-cap: !expr 'seventh_cluster_caption'
+#| layout-ncol: 1
+#| fig-width: 12
+#| fig-height: 10
+
+# as.data.frame(tokens_in_clusters[[as.numeric(biggest_clusters[7])]])
+
+seventh_cluster_keyness <- textstat_keyness(dfm_without_stopwords_and_short_segments, target = dfm_without_stopwords_and_short_segments$Cluster == biggest_clusters[7])
+textplot_keyness(seventh_cluster_keyness, show_legend = TRUE, show_reference = TRUE, n = 20)
+
+```
+
+#### Interpretation
+
+In this cluster, we find segments related to the question of “angles”, of their measure in “degrees” (*degrés*), some of them being “right” angles (*droits*). The verb “to turn” is also associated with this cluster. Segments describe supportive moments in class with the word “good” (*bien*), in expressions like “that’s good! Very good!” and also interactivity, with interrogative words like “how much” (*combien*) and “what” (*quoi*), and the word “sure” (*sûr*) used by the teacher asking “are you sure?”
+
+We call it *angles*.
+
+### Cluster `r biggest_clusters[8]` (containing `r cluster_nb_of_segments[[8]]` segments) ---  `r biggest_clusters_names[8]`
+
+#### Tokens
+
+`r tokens_in_clusters[[as.numeric(biggest_clusters[8])]]$feature`
+
+```{r}
+#| label: fig-tokens-in-eighth-cluster-display
+#| output: true
+#| echo: false
+#| fig-cap: !expr 'eighth_cluster_caption'
+#| layout-ncol: 1
+#| fig-width: 12
+#| fig-height: 10
+
+# as.data.frame(tokens_in_clusters[[as.numeric(biggest_clusters[8])]])
+
+eighth_cluster_keyness <- textstat_keyness(dfm_without_stopwords_and_short_segments, target = dfm_without_stopwords_and_short_segments$Cluster == biggest_clusters[8])
+textplot_keyness(eighth_cluster_keyness, show_legend = TRUE, show_reference = TRUE, n = 20)
+
+```
+
+#### Interpretation
+
+The cluster is centered on interactive discussions about the idea of repetition, with the verb “to repeat” (*répéter*) and the word “several” (*plusieurs*). The segments give an impression of interactivity as there are a lot of “yes” (*oui*) and “yeah” (*ouais*), as questions or in answers.
+
+We call it *interaction*.
+
+### Cluster `r biggest_clusters[9]` (containing `r cluster_nb_of_segments[[9]]` segments) ---  `r biggest_clusters_names[9]`
+
+#### Tokens
+
+`r tokens_in_clusters[[as.numeric(biggest_clusters[9])]]$feature`
+
+```{r}
+#| label: fig-tokens-in-nineth-cluster-display
+#| output: true
+#| echo: false
+#| fig-cap: !expr 'nineth_cluster_caption'
+#| layout-ncol: 1
+#| fig-width: 12
+#| fig-height: 10
+
+# as.data.frame(tokens_in_clusters[[as.numeric(biggest_clusters[9])]])
+
+nineth_cluster_keyness <- textstat_keyness(dfm_without_stopwords_and_short_segments, target = dfm_without_stopwords_and_short_segments$Cluster == biggest_clusters[9])
+textplot_keyness(nineth_cluster_keyness, show_legend = TRUE, show_reference = TRUE, n = 20)
+
+```
+
+#### Interpretation
+
+In this cluster, several segments mention the drawing of a “rectangle”. Questions are asked by the teacher with the word “what” (*quoi*) in expressions like “what do we do now?” or “what is the command?”. The word “command” is also associated to this cluster. The vocabulary in the segments suggest moments of active involvements into hands-on programming practice with the verbs “to do” (*faire*), “to begin” (*commencer*), “to try” (*essayer*).
+
+We call it *hands-on*.
+
+### Cluster `r biggest_clusters[10]` (containing `r cluster_nb_of_segments[[10]]` segments) ---  `r biggest_clusters_names[10]`
+
+#### Tokens
+
+`r tokens_in_clusters[[as.numeric(biggest_clusters[10])]]$feature`
+
+```{r}
+#| label: fig-tokens-in-tenth-cluster-display
+#| output: true
+#| echo: false
+#| fig-cap: !expr 'tenth_cluster_caption'
+#| layout-ncol: 1
+#| fig-width: 12
+#| fig-height: 10
+
+# as.data.frame(tokens_in_clusters[[as.numeric(biggest_clusters[10])]])
+
+tenth_cluster_keyness <- textstat_keyness(dfm_without_stopwords_and_short_segments, target = dfm_without_stopwords_and_short_segments$Cluster == biggest_clusters[10])
+textplot_keyness(tenth_cluster_keyness, show_legend = TRUE, show_reference = TRUE, n = 20)
+
+```
+
+#### Interpretation
+
+These segments express moments of hesitation for the teacher, with sentences beginning with an “ah”, sometimes in conjunction with “damn” (*mince*) suggesting that the teacher made a mistake or something unwanted, or with “no” suggesting that the teacher tried something that didn’t work. “Maybe” (*peut-être*) is also associated with the cluster. It suggests interactions with the online platform, potentially troubleshooting and guiding students through programming tasks.
+
+We call it *troubleshooting*.
+
+## Evolution of clusters during the lesson
+
+Once the segments have been associated with different clusters, we can look at the evolution of the clusters during the lesson.
+
+```{r}
+#| label: fig-evolution-of-clusters-during-lesson
+#| output: true
+#| echo: false
+#| fig-cap: Clusters repartition during the lesson
+#| layout-ncol: 1
+#| fig-width: 12
+#| fig-height: 10
+
+plot_evolution_of_clusters
+
+```
+
+# Correspondence Analysis
+
+```{r}
+#| label: import-alt-creation-and-ca
+#| include: false
+
+# do the import
+source("08_alt_creation_and_ca.R", local = knitr::knit_global())
+
+```
+
+After having performed Reinert's clustering, we execute a Correspondence Analysis (CA) to explore the relationships between the different variables associated with the lexicon.
+
+A contigency table is constituted as an Aggregated Lexical Table (ALT) where the rows represent the words and the columns the different variables associated with the segments. It is composed of **`r nrow(tableau_lexical_questions)` words** and **`r ncol(tableau_lexical_questions)` modalities of categorical variables**.
+
+Each cell of the table contains the number of segments containing a word and associated to a category of a variable.
+
+Here is an extract of the first six rows and 9 columns of the Aggregated Lexical Table (ALT) used for the CA:
+
+```{r}
+#| label: aggregated-lexical-table-head-display
+#| output: true
+#| echo: false
+#| tbl-cap: Aggregated Lexical Table (ALT) first lines and columns
+
+kable(head(tableau_lexical_questions)[ , 1:9])
+
+```
+
+The categories of the variables are the following: *`r colnames(tableau_lexical_questions)`*.
+
+```{r}
+#| label: fig-display-plot-eigenvalues
+#| output: true
+#| echo: false
+#| fig-cap: "Eigenvalues of the Correspondence Analysis"
+#| fig-width: 12
+#| fig-height: 6
+
+ca_alt_screeplot
+
+```
+
+```{r}
+#| label: fig-display-mca
+#| output: true
+#| echo: false
+#| fig-cap: "Axes 1 and 2 of the Correspondence Analysis"
+#| fig-width: 12
+#| fig-height: 10
+
+plot_ca_two_teachers
+
+```
+
+{{< pagebreak >}}
+
+Here are the elements most associated with dimensions 1 and 2 of the CA. The elements are ordered by decreasing cos2 values.
+
+```{r}
+#| label: tbl-contrib-cos2-coord-dim1-display
+#| output: true
+#| echo: false
+#| tbl-cap: "Axis 1 --- 30 elements with highest cos2"
+#| tbl-colwidths: [40,40,40]
+
+kable(table_ca_two_teachers_dim1_extract)
+
+```
+
+```{r}
+#| label: tbl-contrib-cos2-coord-dim2-display
+#| output: true
+#| echo: false
+#| tbl-cap: "Axis 2 --- 30 elements with highest cos2"
+#| tbl-colwidths: [40,40,40]
+
+kable(table_ca_two_teachers_dim2_extract)
+
+```
