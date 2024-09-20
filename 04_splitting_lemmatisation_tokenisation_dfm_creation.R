@@ -7,7 +7,6 @@ corpus_segm_unlemm_full <- split_segments(corpus_lesson_disc, segment_size = 40)
 
 # instructions to create a python virtual environment for spacy
 # not needed to run once the environment is created --- keeping it here for archive if needed
-# detailed infos in: /Users/p2955/Library/CloudStorage/OneDrive-HEPVaud/HEP/recherche/statistiques/classification Reinert/Instructions to create an environment for spacy-updated.md
 
 # choose the version of python you want
 # version <- "3.11.7"
@@ -23,11 +22,7 @@ corpus_segm_unlemm_full <- split_segments(corpus_lesson_disc, segment_size = 40)
 # unfortunately, using this function spacy_install(), I wasn’t able to specify the environment in which I wanted to install spaCy… so the function didn’t install spaCy in the environment I created just before, it created a new environment (!) with the default name "r-spacyr" and installed spaCy into it… good things: this environment took the python version I decided for the first environment (here 3.11.7); spaCy could be installed with the option [apple] that makes it use the capacities of the GPU of the Apple Silicon chip through Metal Performance Shaders; the language model is the one I wanted.
 # spacy_install(version = "apple", lang_models = "fr_dep_news_trf", ask = interactive())
 
-# Lancement de la lemmatisation avec le bon modèle 
-
-# original option with a conda environment… deprecated
-# Sys.setenv(SPACY_PYTHON = "/Users/p2955/miniconda3")
-# spacy_initialize(model = "fr_dep_news_trf", condaenv = "condaenvforspacy")
+# Lancement de la lemmatisation avec le bon modèle
 
 # new option with a python virtual environment venv, working
 spacy_initialize(model = "fr_dep_news_trf", virtualenv = "r-spacyr")

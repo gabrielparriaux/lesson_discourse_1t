@@ -9,7 +9,7 @@ names(first_teacher_disc_df)[names(first_teacher_disc_df) == 'Duration.x'] <- 's
 names(first_teacher_disc_df)[names(first_teacher_disc_df) == 'Comment_1'] <- 'recipient'
 
 # remove unnecessary email in recipient column
-first_teacher_disc_df$recipient<-gsub("gabriel.parriaux@hepl.ch: ","",as.character(first_teacher_disc_df$recipient))
+first_teacher_disc_df$recipient<-gsub("surname.name@domain.org: ","",as.character(first_teacher_disc_df$recipient))
 
 # triplicate column to separate comments
 first_teacher_disc_df$comment_didactic <- first_teacher_disc_df$recipient
