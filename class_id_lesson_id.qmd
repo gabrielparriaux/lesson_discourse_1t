@@ -46,6 +46,7 @@ format:
 # load libraries
 source("01_libraries.R", local = knitr::knit_global())
 
+# this is just to check if git is working
 ```
 
 ```{r}
